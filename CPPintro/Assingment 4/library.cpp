@@ -11,10 +11,15 @@ private:
     bool isIssued;
 
 public:
-    // Parameterized constructor
-    LibraryBook(string bTitle = "", string bAuthor = "", string bIsbn = "")
-        : title(bTitle), author(bAuthor), isbn(bIsbn), isIssued(false) {}
+    // Simple parameterized constructor
+    LibraryBook(string bTitle, string bAuthor, string bIsbn) {
+        title = bTitle;
+        author = bAuthor;
+        isbn = bIsbn;
+        isIssued = false; // Initially the book is available
+    }
 
+    // Function to issue the book
     void issueBook() {
         if (isIssued) {
             cout << "\nError: \"" << title << "\" is already issued.\n";
@@ -24,6 +29,7 @@ public:
         }
     }
 
+    // Function to return the book
     void returnBook() {
         if (!isIssued) {
             cout << "\nError: \"" << title << "\" is not currently issued.\n";
@@ -33,32 +39,34 @@ public:
         }
     }
 
-    void displayBook() const {
+    // Function to display book details
+    void displayBook() {
         cout << "\n--- Book Details ---\n";
-        cout << "Title:  " << title << "\n";
-        cout << "Author: " << author << "\n";
-        cout << "ISBN:   " << isbn << "\n";
-        cout << "Status: " << (isIssued ? "Issued" : "Available") << "\n";
+        cout << "Title  : " << title << "\n";
+        cout << "Author : " << author << "\n";
+        cout << "ISBN   : " << isbn << "\n";
+        cout << "Status : " << (isIssued ? "Issued" : "Available") << "\n";
         cout << "--------------------\n";
     }
 };
 
 int main() {
-    string title, author, isbn;
+    string bTitle, bAuthor, bIsbn;
 
-    // Taking book details from user
+    // Get input from user
     cout << "Enter Book Title: ";
-    getline(cin, title);
+    getline(cin, bTitle);
 
     cout << "Enter Author Name: ";
-    getline(cin, author);
+    getline(cin, bAuthor);
 
     cout << "Enter ISBN: ";
-    getline(cin, isbn);
+    getline(cin, bIsbn);
 
-    LibraryBook book(title, author, isbn);
+    // Initializing object with simple parameterized constructor
+    LibraryBook book(bTitle, bAuthor, bIsbn);
 
-    int choice;
+    int choice = 0;
     do {
         cout << "\n=== Library Menu ===";
         cout << "\n1. Display Book Details";
