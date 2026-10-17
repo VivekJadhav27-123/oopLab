@@ -13,6 +13,7 @@ public:
     {
         this->feet = f;
         this->inch = i;
+     
     }
 
     // Overloading (-) operator
@@ -23,6 +24,19 @@ public:
 
         cout << "\nFeet & Inches (Decrement): "
              << feet << " " << inch <<"\n";
+
+           
+    }
+
+     void operator+()
+    {
+        feet++;
+        inch++;
+
+        cout << "\nFeet & Inches (Increase): "
+             << feet << " " << inch <<"\n";
+
+           
     }
 };
 
@@ -33,6 +47,7 @@ int main()
 
     // Use unary operator as a single operand
     -d1;
-
+    +d1;
+    
     return 0;
 }
