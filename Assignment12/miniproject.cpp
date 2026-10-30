@@ -1,73 +1,305 @@
-===================================
-     WELCOME TO ARENA QUEST        
-     ===================================
-     Enter your hero's custom name: Anuj
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <memory>
 
-     Choose Your Character Class:
-     1. Warrior (High HP, Shield Slam)
-     2. Mage (High Attack, Fireball)
-     3. Archer (Balanced, Triple Shot)
-     Enter selection (1-3): 2
-     [System] Anuj entered the battle ground.
-     [System] Goblin Scout entered the battle ground.
-     [System] Orc Berserker entered the battle ground.
-     [System] Red Dragon Boss entered the battle ground.
+using namespace std;
 
-     -----------------------------------
-     >>> STAGE 1: Battle Against Goblin Scout <<<
-     -----------------------------------
+// --- 1. EXCEPTION HANDLING CLASS ---
+class GameException : public exception {
+    string msg;
+public:
+    GameException(string m) : msg(m) {}
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
 
-     [HERO] Anuj | HP: 80/80 | Base ATK: 30 | Potions: 2
-     [ENEMY] Goblin Scout | HP: 50/50 | Base ATK: 10
+// --- 2. BASE CLASS (INHERITANCE & POLYMORPHISM) ---
+class Character {
+protected:
+    string name;
+    int health;
+    int maxHealth;
+    int attackPower;
+public:
+    Character(string n, int h, int ap) : name(n), health(h), maxHealth(h), attackPower(ap) {
+        cout << "[System] " << name << " entered the battle ground.\n";
+    }
+    
+    virtual ~Character() {
+        cout << "[System] " << name << " left the memory.\n";
+    }
 
-     Choose Action:
-     1. Basic Attack
-     2. Special Class Move
-     3. Use Heal Potion
-     4. Loot Extra Potion (Operator Overloading)
-     Selection: 2
-     Anuj casts [FIREBALL EXPLOSION], dealing 55 massive magic damage!
+    virtual void showStats() {
+        cout << name << " | HP: " << health << "/" << maxHealth << " | Base ATK: " << attackPower;
+    }
 
-     [VICTORY] You defeated Goblin Scout!
+    virtual void attackTarget(Character &target) = 0; // Pure Virtual Function
+    virtual void specialMove(Character &target) = 0; // Pure Virtual Function
 
-     -----------------------------------
-     >>> STAGE 2: Battle Against Orc Berserker <<<
-     -----------------------------------
+    int getHealth() const { return health; }
+    string getName() const { return name; }
 
-     [HERO] Anuj | HP: 80/80 | Base ATK: 30 | Potions: 2
-     [ENEMY] Orc Berserker | HP: 80/80 | Base ATK: 18
+    void reduceHealth(int dmg) {
+        health -= dmg;
+        if (health < 0) health = 0;
+    }
 
-     Choose Action:
-     1. Basic Attack
-     2. Special Class Move
-     3. Use Heal Potion
-     4. Loot Extra Potion (Operator Overloading)
-     Selection: 1
-     Anuj casts Arcane Bolt, dealing 30 damage!
-     Orc Berserker performs a CRITICAL STRIKE for 28 damage!
+    void heal(int amount) {
+        health += amount;
+        if (health > maxHealth) health = maxHealth;
+    }
+};
 
-     -----------------------------------
-     [HERO] Anuj | HP: 52/80 | Base ATK: 30 | Potions: 2
-     [ENEMY] Orc Berserker | HP: 50/80 | Base ATK: 18
+// --- 3. DERIVED PLAYER CLASSES ---
+class Warrior : public Character {
+    int shield;
+public:
+    Warrior(string n) : Character(n, 120, 20), shield(15) {}
 
-     Choose Action:
-     1. Basic Attack
-     2. Special Class Move
-     3. Use Heal Potion
-     4. Loot Extra Potion (Operator Overloading)
-     Selection: 3
-     Anuj drank a Potion! Restored 35 HP.
-     Orc Berserker attacks Anuj for 18 damage!
+    void attackTarget(Character &target) override {
+        cout << name << " swings a Heavy Sword, dealing " << attackPower << " damage!\n";
+        target.reduceHealth(attackPower);
+    }
 
-     -----------------------------------
-     ...
-     ===================================
-      CONGRATULATIONS! ARENA CLEARED!   
-      ===================================
+    void specialMove(Character &target) override {
+        int bonusDmg = attackPower + 15;
+        cout << name << " uses [SHIELD SLAM], dealing " << bonusDmg << " heavy damage!\n";
+        target.reduceHealth(bonusDmg);
+    }
+};
 
-      ===================================
-            HALL OF FAME (HIGH SCORES)    
-            ===================================
-            Anuj - Final Score: 760
-            ===================================
-            [System] Anuj left the memory.
+class Mage : public Character {
+    int mana;
+public:
+    Mage(string n) : Character(n, 80, 30), mana(50) {}
+
+    void attackTarget(Character &target) override {
+        cout << name << " casts Arcane Bolt, dealing " << attackPower << " damage!\n";
+        target.reduceHealth(attackPower);
+    }
+
+    void specialMove(Character &target) override {
+        int bonusDmg = attackPower + 25;
+        cout << name << " casts [FIREBALL EXPLOSION], dealing " << bonusDmg << " massive magic damage!\n";
+        target.reduceHealth(bonusDmg);
+    }
+};
+
+class Archer : public Character {
+public:
+    Archer(string n) : Character(n, 95, 25) {}
+
+    void attackTarget(Character &target) override {
+        cout << name << " shoots a Precise Arrow, dealing " << attackPower << " damage!\n";
+        target.reduceHealth(attackPower);
+    }
+
+    void specialMove(Character &target) override {
+        int bonusDmg = attackPower + 20;
+        cout << name << " fires [TRIPLE SHOT], dealing " << bonusDmg << " rapid damage!\n";
+        target.reduceHealth(bonusDmg);
+    }
+};
+
+// --- OPERATOR OVERLOADING & PLAYER INVENTORY MANAGEMENT ---
+class PlayerInventory {
+    int potions;
+public:
+    PlayerInventory(int p = 2) : potions(p) {}
+
+    // Overloading '+' operator to loot/add potions
+    PlayerInventory operator+(int count) {
+        potions += count;
+        return *this;
+    }
+
+    int getPotions() const { return potions; }
+
+    void usePotion(Character &hero) {
+        if (potions <= 0) {
+            throw GameException("No health potions remaining in inventory!");
+        }
+        potions--;
+        hero.heal(35);
+        cout << hero.getName() << " drank a Potion! Restored 35 HP.\n";
+    }
+};
+
+// --- MONSTER DERIVED CLASSES ---
+class Monster : public Character {
+public:
+    Monster(string n, int h, int ap) : Character(n, h, ap) {}
+
+    void attackTarget(Character &target) override {
+        cout << name << " attacks " << target.getName() << " for " << attackPower << " damage!\n";
+        target.reduceHealth(attackPower);
+    }
+
+    void specialMove(Character &target) override {
+        int heavyDmg = attackPower + 10;
+        cout << name << " performs a CRITICAL STRIKE for " << heavyDmg << " damage!\n";
+        target.reduceHealth(heavyDmg);
+    }
+};
+
+// --- FILE HANDLING ---
+void saveHighScore(string name, int score) {
+    ofstream outFile("highscores.txt", ios::app);
+    if (!outFile.is_open()) {
+        throw GameException("Could not open highscores.txt to save score!");
+    }
+    outFile << name << " - Final Score: " << score << "\n";
+    outFile.close();
+}
+
+void displayHighScores() {
+    cout << "\n===================================\n";
+    cout << "      HALL OF FAME (HIGH SCORES)    \n";
+    cout << "===================================\n";
+    ifstream inFile("highscores.txt");
+    if (!inFile.is_open()) {
+        cout << "No past high scores found.\n";
+        return;
+    }
+    string line;
+    while (getline(inFile, line)) {
+        cout << line << "\n";
+    }
+    inFile.close();
+    cout << "===================================\n";
+}
+
+// --- MAIN GAME ENGINE ---
+int main() {
+    string pName;
+    int classChoice;
+
+    cout << "===================================\n";
+    cout << "     WELCOME TO ARENA QUEST        \n";
+    cout << "===================================\n";
+    cout << "Enter your hero's custom name: ";
+    cin >> pName;
+
+    cout << "\nChoose Your Character Class:\n";
+    cout << "1. Warrior (High HP, Shield Slam)\n";
+    cout << "2. Mage (High Attack, Fireball)\n";
+    cout << "3. Archer (Balanced, Triple Shot)\n";
+    cout << "Enter selection (1-3): ";
+    cin >> classChoice;
+
+    Character* hero = nullptr;
+
+    try {
+        if (cin.fail() || classChoice < 1 || classChoice > 3) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            throw GameException("Invalid Class Choice! Defaulting to Warrior.");
+        }
+    } catch (const GameException &e) {
+        cout << "[Exception] " << e.what() << "\n";
+        classChoice = 1;
+    }
+
+    if (classChoice == 1) hero = new Warrior(pName);
+    else if (classChoice == 2) hero = new Mage(pName);
+    else hero = new Archer(pName);
+
+    PlayerInventory inventory(2); // 2 default potions
+
+    // 3 Monsters array
+    vector<Monster> monsters = {
+        Monster("Goblin Scout", 50, 10),
+        Monster("Orc Berserker", 80, 18),
+        Monster("Red Dragon Boss", 120, 25)
+    };
+
+    int totalScore = 0;
+
+    // Game loop over 3 stages
+    for (size_t i = 0; i < monsters.size(); i++) {
+        Monster& currentMonster = monsters[i];
+        cout << "\n-----------------------------------\n";
+        cout << ">>> STAGE " << (i + 1) << ": Battle Against " << currentMonster.getName() << " <<<\n";
+        cout << "-----------------------------------\n";
+
+        while (hero->getHealth() > 0 && currentMonster.getHealth() > 0) {
+            cout << "\n[HERO] "; hero->showStats(); cout << " | Potions: " << inventory.getPotions() << "\n";
+            cout << "[ENEMY] "; currentMonster.showStats(); cout << "\n\n";
+
+            cout << "Choose Action:\n";
+            cout << "1. Basic Attack\n";
+            cout << "2. Special Class Move\n";
+            cout << "3. Use Heal Potion\n";
+            cout << "4. Loot Extra Potion (Operator Overloading)\n";
+            cout << "Selection: ";
+
+            int move;
+            cin >> move;
+
+            try {
+                if (cin.fail()) {
+                    cin.clear();
+                    cin.ignore(10000, '\n');
+                    throw GameException("Numeric inputs only!");
+                }
+
+                if (move == 1) {
+                    hero->attackTarget(currentMonster);
+                } 
+                else if (move == 2) {
+                    hero->specialMove(currentMonster);
+                } 
+                else if (move == 3) {
+                    inventory.usePotion(*hero);
+                } 
+                else if (move == 4) {
+                    inventory = inventory + 1; // Overloaded '+' operator
+                    cout << "Found 1 bonus potion!\n";
+                } 
+                else {
+                    throw GameException("Invalid move selection! Turn wasted.");
+                }
+
+                // Monster counter-attacks if still alive
+                if (currentMonster.getHealth() > 0) {
+                    if (rand() % 3 == 0) {
+                        currentMonster.specialMove(*hero);
+                    } else {
+                        currentMonster.attackTarget(*hero);
+                    }
+                } else {
+                    cout << "\n[VICTORY] You defeated " << currentMonster.getName() << "!\n";
+                    totalScore += 100 * (i + 1);
+                }
+
+            } catch (const GameException &e) {
+                cout << "[Exception Caught] " << e.what() << "\n";
+            }
+        }
+
+        if (hero->getHealth() <= 0) {
+            cout << "\n[GAME OVER] " << hero->getName() << " fell in stage " << (i + 1) << ".\n";
+            break;
+        }
+    }
+
+    if (hero->getHealth() > 0) {
+        cout << "\n===================================\n";
+        cout << " CONGRATULATIONS! ARENA CLEARED!   \n";
+        cout << "===================================\n";
+        totalScore += hero->getHealth() * 2;
+    }
+
+    try {
+        saveHighScore(hero->getName(), totalScore);
+        displayHighScores();
+    } catch (const GameException &e) {
+        cout << "[File Exception] " << e.what() << "\n";
+    }
+
+    delete hero; // Free memory
+    return 0;
+}
